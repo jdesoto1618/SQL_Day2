@@ -1,0 +1,274 @@
+// What languages are spoken in the United States? (12) Brazil? (not Spanish...) Switzerland? (6)
+SELECT
+	c.name AS country,
+	cl.language AS language
+FROM
+	country c JOIN
+	countrylanguage cl ON c.code=cl.countrycode
+WHERE
+	c.name='United States' //change this for other countries
+ORDER BY
+	country
+
+//What are the cities of the US? (274) India? (341)
+SELECT
+	c.name AS country,
+	city.name AS city
+FROM
+	country c JOIN
+	city city ON c.code=city.countrycode
+WHERE
+	c.name='United States' //Change this to India for those cities
+ORDER BY
+	country
+
+//What are the official languages of Switzerland? (4 languages)
+SELECT
+	c.name AS country,
+	cl.language AS language
+FROM
+	country c JOIN
+	countrylanguage cl ON c.code=cl.countrycode
+WHERE
+	c.name='Switzerland'
+ORDER BY
+	country
+
+//Which country or countries speak the most languages? (12 languages)
+Hint: Use GROUP BY and COUNT(...)
+SELECT
+	c.name AS country,
+	count(cl.language) AS language
+
+FROM
+	country c JOIN
+	countrylanguage cl ON c.code=cl.countrycode
+GROUP BY
+	country
+ORDER BY
+	language DESC
+
+//Which country or countries have the most official languages? (4 languages)
+Hint: Use GROUP BY and ORDER BY
+SELECT
+	c.name AS country,
+	count(cl.language) AS language
+
+FROM
+	country c JOIN
+	countrylanguage cl ON c.code=cl.countrycode
+WHERE
+	isofficial = 'true'
+GROUP BY
+	country
+ORDER BY
+	language DESC
+
+//Which languages are spoken in the ten largest (area) countries?
+Hint: Use WITH to get the countries and join with that table
+WITH
+	tenlargest AS (SELECT surfacearea, name, code FROM country ORDER BY surfacearea DESC LIMIT 10)
+SELECT
+	cl.language AS language,
+	tenlargest.name
+FROM
+	countrylanguage cl JOIN
+	tenlargest ON cl.countrycode=tenlargest.code
+ORDER BY
+	tenlargest
+
+//What languages are spoken in the 20 poorest (GNP/ capita) countries in the world? (94 with GNP > 0)
+Hint: Use WITH to get the countries, and SELECT DISTINCT to remove duplicates
+WITH
+	twentypoorest AS (SELECT * FROM country WHERE gnp > 0 AND population > 0 ORDER BY gnp/population ASC LIMIT 20)
+SELECT DISTINCT
+	cl.language AS language
+FROM
+	countrylanguage cl JOIN
+	twentypoorest ON cl.countrycode=twentypoorest.code
+ORDER BY
+	cl.language
+
+//Are there any countries without an official language?
+Hint: Use NOT IN with a SELECT
+WITH nolang AS (SELECT DISTINCT countrycode FROM countrylanguage WHERE isofficial = 'false' EXCEPT (SELECT DISTINCT countrycode FROM countrylanguage WHERE isofficial = 'true'))
+
+SELECT
+	c.name AS country
+FROM
+	country c JOIN
+	nolang ON c.code=nolang.countrycode
+
+//What are the languages spoken in the countries with no official language? (49 countries, 172 languages, incl. English)
+WITH nolang AS (SELECT DISTINCT countrycode FROM countrylanguage WHERE isofficial = 'false' EXCEPT (SELECT DISTINCT countrycode FROM countrylanguage WHERE isofficial = 'true'))
+
+SELECT DISTINCT
+	countrylanguage.language
+FROM
+	nolang JOIN
+	countrylanguage ON countrylanguage.countrycode=nolang.countrycode
+
+//Which countries have the highest proportion of official language speakers? The lowest?
+SELECT DISTINCT
+	c.population AS countrypop,
+	c.name AS country,
+	cl.isofficial AS language
+
+FROM
+	country c JOIN
+	countrylanguage cl ON c.code=cl.countrycode
+
+WHERE
+	cl.isofficial='true'
+
+ORDER BY
+	c.population DESC // change to ASC for lowest proportion
+
+//What is the most spoken language in the world?
+SELECT
+	cl.language, SUM(c.population*cl.percentage) AS idontknow
+FROM
+	country c JOIN
+	countrylanguage cl ON c.code=cl.countrycode
+GROUP BY
+	cl.language
+ORDER BY
+	idontknow DESC LIMIT 1
+
+//What is the population of the United States? What is the city population of the United States?
+SELECT
+	c.population AS population
+FROM
+	country c
+WHERE
+	name='United States'
+
+  SELECT
+  	c.name,
+  	SUM(ci.population)
+  FROM
+  	country c JOIN
+  	city ci ON c.code=ci.countrycode
+  WHERE
+  	c.name='United States'
+  GROUP BY
+  	c.name
+
+//What is the population of India? What is the city population of India?
+SELECT
+	c.name,
+	SUM(ci.population)
+FROM
+	country c JOIN
+	city ci ON c.code=ci.countrycode
+WHERE
+	c.name='India'
+GROUP BY
+	c.name
+
+  SELECT
+  	c.population AS population
+  FROM
+  	country c
+  WHERE
+  	name='India'
+
+//Which countries have no cities? (7 not really countries...)
+SELECT DISTINCT
+	country.name
+FROM
+	country LEFT JOIN
+	city ON country.code=city.countrycode
+WHERE
+	city.name is NULL
+
+//What is the total population of cities where English is the official language? Spanish?
+Hint: The official language of a city is based on country.
+SELECT
+	SUM(city.population)
+FROM
+	country JOIN
+	city ON country.code=city.countrycode
+	JOIN countrylanguage ON city.countrycode=countrylanguage.countrycode
+WHERE
+	countrylanguage.language='English'
+
+//Spanish speaking cities
+
+SELECT
+	SUM(city.population)
+FROM
+	country JOIN
+	city ON country.code=city.countrycode
+	JOIN countrylanguage ON city.countrycode=countrylanguage.countrycode
+WHERE
+	countrylanguage.language='Spanish'
+
+//Which countries have the 100 biggest cities in the world?
+SELECT
+	country.name,
+	city.population,
+	city.name
+FROM
+	country JOIN
+	city ON country.code=city.countrycode
+ORDER BY
+	city.population DESC LIMIT 100
+
+//What languages are spoken in the countries with the 100 biggest cities in the world?
+WITH hundredcities AS(SELECT name, countrycode, population FROM city ORDER BY city.population DESC LIMIT 100)
+SELECT
+	country.name,
+	hundredcities.population,
+	hundredcities.name,
+	countrylanguage.language
+FROM
+	country JOIN
+	hundredcities ON country.code=hundredcities.countrycode
+	JOIN countrylanguage ON countrylanguage.countrycode=hundredcities.countrycode
+ORDER BY
+	hundredcities.population DESC
+
+//Which customer placed the orders on the earliest date? What did they order?
+SELECT
+	customers.first_name,
+	customers.last_name,
+	rentals.rental_date,
+	films.title
+FROM
+	customers RIGHT JOIN
+	rentals ON customers.customer_id=rentals.customer_id
+	JOIN inventory ON rentals.inventory_id=inventory.inventory_id
+	JOIN films ON inventory.film_id=films.film_id
+ORDER BY
+	rentals.rental_date
+
+//Which product do we have the most of? Find the rental ids and customer names for all orders for that item.
+SELECT
+	count(inventory.film_id) AS Highest,
+	films.title
+FROM
+	films RIGHT JOIN
+	inventory ON films.film_id=inventory.film_id
+GROUP BY
+	films.title
+ORDER BY
+	Highest DESC
+
+  WITH Top_Renter AS(SELECT films.title, inventory.inventory_id, count(inventory.film_id) AS Count FROM inventory JOIN films ON films.film_id=inventory.film_id GROUP BY films.title, inventory.inventory_id ORDER BY Count DESC LIMIT 1)
+  SELECT
+  	films.title,
+  	customers.first_name,
+  	customers.last_name
+  FROM
+  	films RIGHT JOIN
+  	Top_Renter ON films.title=Top_Renter.title
+  	JOIN rentals ON Top_Renter.inventory_id=rentals.inventory_id
+  	JOIN customers ON rentals.customer_id=customers.customer_id
+  GROUP BY
+  	films.title,
+  	customers.first_name,
+  	customers.last_name,
+  	Top_Renter
+  ORDER BY
+  	Top_Renter DESC
